@@ -16,6 +16,11 @@ class PostController extends Controller
 
     public function store(StorePostRequest $request, Board $board, Thread $thread): RedirectResponse
     {
+        // Security: Ensure thread belongs to this board
+        if ($thread->board_id !== $board->id) {
+            abort(404);
+        }
+
         // Check if thread is locked
         if ($thread->is_locked) {
             return back()->withErrors(['error' => 'This thread is locked.']);

@@ -104,6 +104,11 @@ class AdminController extends Controller
     // Thread Management
     public function deleteThread(Board $board, Thread $thread): RedirectResponse
     {
+        // Security: Ensure thread belongs to this board
+        if ($thread->board_id !== $board->id) {
+            abort(404);
+        }
+
         // Delete all post images
         foreach ($thread->posts as $post) {
             $this->imageService->delete($post->image_path, $post->image_thumbnail_path);
@@ -116,6 +121,11 @@ class AdminController extends Controller
 
     public function togglePinThread(Board $board, Thread $thread): RedirectResponse
     {
+        // Security: Ensure thread belongs to this board
+        if ($thread->board_id !== $board->id) {
+            abort(404);
+        }
+
         $thread->update(['is_pinned' => !$thread->is_pinned]);
 
         return back()->with('success', 'Thread pin status updated!');
@@ -123,6 +133,11 @@ class AdminController extends Controller
 
     public function toggleLockThread(Board $board, Thread $thread): RedirectResponse
     {
+        // Security: Ensure thread belongs to this board
+        if ($thread->board_id !== $board->id) {
+            abort(404);
+        }
+
         $thread->update(['is_locked' => !$thread->is_locked]);
 
         return back()->with('success', 'Thread lock status updated!');
@@ -131,6 +146,11 @@ class AdminController extends Controller
     // Post Management
     public function deletePost(Board $board, Thread $thread, Post $post): RedirectResponse
     {
+        // Security: Ensure thread belongs to board and post belongs to thread
+        if ($thread->board_id !== $board->id || $post->thread_id !== $thread->id) {
+            abort(404);
+        }
+
         // Delete post images if exists
         $this->imageService->delete($post->image_path, $post->image_thumbnail_path);
 

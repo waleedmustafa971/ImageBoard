@@ -47,6 +47,11 @@ class ThreadController extends Controller
 
     public function show(Board $board, Thread $thread): View
     {
+        // Security: Ensure thread belongs to this board
+        if ($thread->board_id !== $board->id) {
+            abort(404);
+        }
+
         $thread->load(['posts' => function ($query) {
             $query->orderBy('created_at');
         }]);
