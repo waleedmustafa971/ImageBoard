@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir)",
+      "Bash(composer --version:*)",
+      "Bash(composer create-project:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
