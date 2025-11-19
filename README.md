@@ -10,6 +10,8 @@ A modern, full-featured imageboard (inspired by 4chan) built with Laravel 12 and
 - **Thread System** - Create threads and reply to existing ones
 - **Post Quoting** - Click post numbers to quote other posts
 - **Admin Panel** - Complete board and content moderation system
+- **Supervisor System** - Assign board-specific moderators with limited permissions
+- **Activity Logging** - Track all moderation actions by admins and supervisors
 - **Thread Management** - Pin and lock threads
 - **Catalog View** - Visual overview of all threads in a board
 
@@ -96,11 +98,49 @@ Access the admin panel at: `http://localhost:8000/admin/login`
 
 ## Admin Features
 
-- Create, edit, and delete boards
-- Pin/unpin threads
-- Lock/unlock threads
-- Delete threads and posts
-- View board statistics
+- **Board Management**
+  - Create, edit, and delete boards
+  - View board statistics
+- **Supervisor Management**
+  - Create and manage board supervisors
+  - Assign/remove supervisors to specific boards
+  - Activate/deactivate supervisor accounts
+- **Moderation Actions**
+  - Pin/unpin threads
+  - Lock/unlock threads
+  - Delete threads and posts
+- **Activity Monitoring**
+  - View comprehensive moderation logs
+  - Filter logs by board, action type, and moderator
+  - Track all admin and supervisor actions
+
+## Supervisor System
+
+Supervisors are board-specific moderators with limited permissions compared to admins.
+
+### Supervisor Features
+
+- **Board-Specific Access** - Only moderate assigned boards
+- **Thread Moderation**
+  - Pin/unpin threads
+  - Lock/unlock threads
+  - Delete threads
+- **Post Moderation**
+  - Delete individual posts
+- **Activity Dashboard**
+  - View assigned boards
+  - See personal moderation history
+
+### Creating a Supervisor
+
+1. Login as admin
+2. Navigate to "Manage Supervisors"
+3. Click "Create New Supervisor"
+4. Fill in username, email, and password
+5. Assign specific boards to moderate
+6. Set active status
+
+Access the supervisor panel at: `http://localhost:8000/supervisor/login`
 
 ## Usage
 
@@ -125,20 +165,33 @@ Click on any post number to automatically add a quote reference to your reply.
 
 ```
 app/
-├── Http/Controllers/
-│   ├── AdminController.php
-│   ├── BoardController.php
-│   ├── PostController.php
-│   └── ThreadController.php
+├── Http/
+│   ├── Controllers/
+│   │   ├── AdminController.php
+│   │   ├── SupervisorController.php
+│   │   ├── BoardController.php
+│   │   ├── PostController.php
+│   │   └── ThreadController.php
+│   └── Middleware/
+│       └── EnsureSupervisorCanModerate.php
 ├── Models/
 │   ├── Admin.php
+│   ├── Supervisor.php
 │   ├── Board.php
 │   ├── Post.php
-│   └── Thread.php
+│   ├── Thread.php
+│   └── ModerationLog.php
 └── Services/
     └── ImageService.php
 resources/views/
 ├── admin/
+│   ├── boards/
+│   ├── supervisors/
+│   ├── activity-logs.blade.php
+│   └── dashboard.blade.php
+├── supervisor/
+│   ├── login.blade.php
+│   └── dashboard.blade.php
 ├── boards/
 ├── threads/
 └── layouts/
@@ -146,11 +199,21 @@ resources/views/
 
 ## Security
 
-- Admin authentication with separate guard
-- CSRF protection on all forms
-- Image upload validation
-- SQL injection protection via Eloquent ORM
-- XSS protection via Blade templating
+- **Authentication**
+  - Separate authentication guards for admin and supervisor
+  - Password hashing with bcrypt
+  - IDOR vulnerability protection
+- **Authorization**
+  - Board-specific access control for supervisors
+  - Middleware-based permission checking
+- **Data Protection**
+  - CSRF protection on all forms
+  - Image upload validation and sanitization
+  - SQL injection protection via Eloquent ORM
+  - XSS protection via Blade templating
+- **Audit Trail**
+  - Comprehensive moderation action logging
+  - Track all changes with moderator attribution
 
 ## Contributing
 

@@ -6,10 +6,13 @@ use App\Http\Requests\StoreBoardRequest;
 use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
+use App\Models\Supervisor;
+use App\Models\ModerationLog;
 use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class AdminController extends Controller
@@ -55,8 +58,17 @@ class AdminController extends Controller
     public function dashboard(): View
     {
         $boards = Board::withCount('threads')->get();
+        $supervisorCount = Supervisor::count();
+        $totalThreads = Thread::count();
+        $totalPosts = Post::count();
 
-        return view('admin.dashboard', compact('boards'));
+        // Get recent moderation logs across all moderators
+        $recentLogs = ModerationLog::with(['board'])
+            ->latest()
+            ->limit(15)
+            ->get();
+
+        return view('admin.dashboard', compact('boards', 'supervisorCount', 'totalThreads', 'totalPosts', 'recentLogs'));
     }
 
     // Board Management
@@ -109,10 +121,23 @@ class AdminController extends Controller
             abort(404);
         }
 
+        $admin = Auth::guard('admin')->user();
+
         // Delete all post images
         foreach ($thread->posts as $post) {
             $this->imageService->delete($post->image_path, $post->image_thumbnail_path);
         }
+
+        // Log the action
+        ModerationLog::logAction(
+            'App\Models\Admin',
+            $admin->id,
+            'delete_thread',
+            'thread',
+            $thread->id,
+            $board->id,
+            ['subject' => $thread->subject]
+        );
 
         $thread->delete();
 
@@ -126,7 +151,21 @@ class AdminController extends Controller
             abort(404);
         }
 
-        $thread->update(['is_pinned' => !$thread->is_pinned]);
+        $admin = Auth::guard('admin')->user();
+        $newStatus = !$thread->is_pinned;
+
+        $thread->update(['is_pinned' => $newStatus]);
+
+        // Log the action
+        ModerationLog::logAction(
+            'App\Models\Admin',
+            $admin->id,
+            $newStatus ? 'pin_thread' : 'unpin_thread',
+            'thread',
+            $thread->id,
+            $board->id,
+            ['subject' => $thread->subject]
+        );
 
         return back()->with('success', 'Thread pin status updated!');
     }
@@ -138,7 +177,21 @@ class AdminController extends Controller
             abort(404);
         }
 
-        $thread->update(['is_locked' => !$thread->is_locked]);
+        $admin = Auth::guard('admin')->user();
+        $newStatus = !$thread->is_locked;
+
+        $thread->update(['is_locked' => $newStatus]);
+
+        // Log the action
+        ModerationLog::logAction(
+            'App\Models\Admin',
+            $admin->id,
+            $newStatus ? 'lock_thread' : 'unlock_thread',
+            'thread',
+            $thread->id,
+            $board->id,
+            ['subject' => $thread->subject]
+        );
 
         return back()->with('success', 'Thread lock status updated!');
     }
@@ -151,11 +204,28 @@ class AdminController extends Controller
             abort(404);
         }
 
+        $admin = Auth::guard('admin')->user();
+
         // Delete post images if exists
         $this->imageService->delete($post->image_path, $post->image_thumbnail_path);
 
         // Check if this is the OP (first post)
         $isOP = $thread->posts()->oldest()->first()->id === $post->id;
+
+        // Log the action
+        ModerationLog::logAction(
+            'App\Models\Admin',
+            $admin->id,
+            'delete_post',
+            'post',
+            $post->id,
+            $board->id,
+            [
+                'post_number' => $post->post_number,
+                'is_op' => $isOP,
+                'thread_subject' => $thread->subject
+            ]
+        );
 
         if ($isOP) {
             // If deleting OP, delete entire thread
@@ -171,5 +241,118 @@ class AdminController extends Controller
         $post->delete();
 
         return back()->with('success', 'Post deleted successfully!');
+    }
+
+    // Supervisor Management
+    public function supervisorIndex(): View
+    {
+        $supervisors = Supervisor::withCount('boards')->get();
+        return view('admin.supervisors.index', compact('supervisors'));
+    }
+
+    public function supervisorCreate(): View
+    {
+        $boards = Board::all();
+        return view('admin.supervisors.create', compact('boards'));
+    }
+
+    public function supervisorStore(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'max:255', 'unique:supervisors'],
+            'email' => ['required', 'email', 'max:255', 'unique:supervisors'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'is_active' => ['boolean'],
+            'boards' => ['array'],
+            'boards.*' => ['exists:boards,id'],
+        ]);
+
+        $supervisor = Supervisor::create([
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'is_active' => $request->boolean('is_active', true),
+        ]);
+
+        if (!empty($validated['boards'])) {
+            $supervisor->boards()->attach($validated['boards']);
+        }
+
+        return redirect()->route('admin.supervisors.index')
+            ->with('success', 'Supervisor created successfully!');
+    }
+
+    public function supervisorEdit(Supervisor $supervisor): View
+    {
+        $boards = Board::all();
+        $assignedBoardIds = $supervisor->boards->pluck('id')->toArray();
+        return view('admin.supervisors.edit', compact('supervisor', 'boards', 'assignedBoardIds'));
+    }
+
+    public function supervisorUpdate(Request $request, Supervisor $supervisor): RedirectResponse
+    {
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'max:255', 'unique:supervisors,username,' . $supervisor->id],
+            'email' => ['required', 'email', 'max:255', 'unique:supervisors,email,' . $supervisor->id],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'is_active' => ['boolean'],
+            'boards' => ['array'],
+            'boards.*' => ['exists:boards,id'],
+        ]);
+
+        $updateData = [
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+            'is_active' => $request->boolean('is_active'),
+        ];
+
+        if (!empty($validated['password'])) {
+            $updateData['password'] = Hash::make($validated['password']);
+        }
+
+        $supervisor->update($updateData);
+
+        // Sync board assignments
+        $supervisor->boards()->sync($validated['boards'] ?? []);
+
+        return redirect()->route('admin.supervisors.index')
+            ->with('success', 'Supervisor updated successfully!');
+    }
+
+    public function supervisorDestroy(Supervisor $supervisor): RedirectResponse
+    {
+        $supervisor->delete();
+
+        return redirect()->route('admin.supervisors.index')
+            ->with('success', 'Supervisor deleted successfully!');
+    }
+
+    // Activity Monitoring
+    public function activityLogs(Request $request): View
+    {
+        $query = ModerationLog::with(['board']);
+
+        // Filter by board
+        if ($request->has('board_id') && $request->board_id) {
+            $query->where('board_id', $request->board_id);
+        }
+
+        // Filter by action
+        if ($request->has('action') && $request->action) {
+            $query->where('action', $request->action);
+        }
+
+        // Filter by moderator type
+        if ($request->has('moderator_type') && $request->moderator_type) {
+            $query->where('moderator_type', $request->moderator_type);
+        }
+
+        $logs = $query->latest()->paginate(50);
+        $boards = Board::all();
+
+        // Get unique actions for filter
+        $actions = ModerationLog::distinct('action')->pluck('action');
+
+        return view('admin.activity-logs', compact('logs', 'boards', 'actions'));
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Board extends Model
 {
@@ -41,5 +42,11 @@ class Board extends Model
     public function incrementPostCount(): void
     {
         $this->increment('post_count');
+    }
+
+    public function supervisors(): BelongsToMany
+    {
+        return $this->belongsToMany(Supervisor::class, 'board_supervisor')
+            ->withTimestamps();
     }
 }

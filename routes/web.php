@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\BoardController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\ThreadController;
 use Illuminate\Support\Facades\Route;
 
@@ -47,5 +48,37 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Post Management
         Route::delete('/{board}/thread/{thread}/post/{post}', [AdminController::class, 'deletePost'])->name('posts.delete');
+
+        // Supervisor Management
+        Route::get('/supervisors', [AdminController::class, 'supervisorIndex'])->name('supervisors.index');
+        Route::get('/supervisors/create', [AdminController::class, 'supervisorCreate'])->name('supervisors.create');
+        Route::post('/supervisors', [AdminController::class, 'supervisorStore'])->name('supervisors.store');
+        Route::get('/supervisors/{supervisor}/edit', [AdminController::class, 'supervisorEdit'])->name('supervisors.edit');
+        Route::put('/supervisors/{supervisor}', [AdminController::class, 'supervisorUpdate'])->name('supervisors.update');
+        Route::delete('/supervisors/{supervisor}', [AdminController::class, 'supervisorDestroy'])->name('supervisors.destroy');
+
+        // Activity Logs
+        Route::get('/activity-logs', [AdminController::class, 'activityLogs'])->name('activity.logs');
+    });
+});
+
+// Supervisor Routes
+Route::prefix('supervisor')->name('supervisor.')->group(function () {
+    // Authentication
+    Route::get('/login', [SupervisorController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [SupervisorController::class, 'login']);
+    Route::post('/logout', [SupervisorController::class, 'logout'])->name('logout');
+
+    // Protected Supervisor Routes
+    Route::middleware(['auth:supervisor'])->group(function () {
+        Route::get('/dashboard', [SupervisorController::class, 'dashboard'])->name('dashboard');
+
+        // Thread Management (with board access check)
+        Route::delete('/{board}/thread/{thread}', [SupervisorController::class, 'deleteThread'])->name('threads.delete')->middleware('supervisor.can_moderate');
+        Route::post('/{board}/thread/{thread}/pin', [SupervisorController::class, 'togglePinThread'])->name('threads.pin')->middleware('supervisor.can_moderate');
+        Route::post('/{board}/thread/{thread}/lock', [SupervisorController::class, 'toggleLockThread'])->name('threads.lock')->middleware('supervisor.can_moderate');
+
+        // Post Management (with board access check)
+        Route::delete('/{board}/thread/{thread}/post/{post}', [SupervisorController::class, 'deletePost'])->name('posts.delete')->middleware('supervisor.can_moderate');
     });
 });

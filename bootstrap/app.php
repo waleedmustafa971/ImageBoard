@@ -11,7 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'supervisor.can_moderate' => \App\Http\Middleware\EnsureSupervisorCanModerate::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
