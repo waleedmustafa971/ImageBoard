@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'ImageBoard')</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/favicon.svg') }}">
+    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #EEF2FF; color: #000; line-height: 1.6; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         header { background: #D6DAF0; border-bottom: 1px solid #B7C5D9; padding: 10px 0; margin-bottom: 20px; }
-        header h1 { color: #AF0A0F; font-size: 28px; text-align: center; }
+        header .header-content { display: flex; align-items: center; justify-content: center; gap: 15px; }
+        header .logo { width: 50px; height: 50px; }
+        header h1 { color: #AF0A0F; font-size: 28px; margin: 0; }
         nav { text-align: center; margin: 10px 0; }
         nav a { color: #34345C; text-decoration: none; margin: 0 10px; font-weight: bold; }
         nav a:hover { text-decoration: underline; }
@@ -56,7 +60,10 @@
 </head>
 <body>
     <header>
-        <h1>ImageBoard</h1>
+        <div class="header-content">
+            <img src="{{ asset('images/logo.svg') }}" alt="ImageBoard Logo" class="logo">
+            <h1>ImageBoard</h1>
+        </div>
         <nav>
             <a href="{{ route('boards.index') }}">Home</a>
             @auth('admin')
@@ -65,8 +72,15 @@
                     @csrf
                     <button type="submit" style="background: none; border: none; color: #34345C; cursor: pointer; font-weight: bold;">Logout</button>
                 </form>
+            @elseauth('supervisor')
+                <a href="{{ route('supervisor.dashboard') }}">Supervisor Dashboard</a>
+                <form action="{{ route('supervisor.logout') }}" method="POST" style="display: inline;">
+                    @csrf
+                    <button type="submit" style="background: none; border: none; color: #34345C; cursor: pointer; font-weight: bold;">Logout</button>
+                </form>
             @else
                 <a href="{{ route('admin.login') }}">Admin Login</a>
+                <a href="{{ route('supervisor.login') }}">Supervisor Login</a>
             @endauth
         </nav>
     </header>
