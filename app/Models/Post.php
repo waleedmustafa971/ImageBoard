@@ -17,6 +17,8 @@ class Post extends Model
         'image_path',
         'image_thumbnail_path',
         'ip_address_hash',
+        'country_code',
+        'country_name',
     ];
 
     protected $casts = [
@@ -72,6 +74,12 @@ class Post extends Model
 
             // Hash IP address
             $post->ip_address_hash = hash('sha256', request()->ip());
+
+            // Get country from IP address
+            $geoIPService = app(\App\Services\GeoIPService::class);
+            $countryInfo = $geoIPService->getCountryFromIP(request()->ip());
+            $post->country_code = $countryInfo['country_code'];
+            $post->country_name = $countryInfo['country_name'];
         });
 
         static::created(function ($post) {

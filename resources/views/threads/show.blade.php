@@ -40,6 +40,12 @@
 <div class="post {{ $index === 0 ? 'op' : '' }}" id="post-{{ $post->post_number }}">
     <div class="post-header">
         <span class="name">{{ $post->name }}</span>
+        @if($post->country_code && $post->country_code !== 'XX')
+            <img src="https://flagcdn.com/16x12/{{ strtolower($post->country_code) }}.png"
+                 alt="{{ $post->country_name }}"
+                 title="{{ $post->country_name }}"
+                 style="margin-left: 5px; vertical-align: middle;">
+        @endif
         <span class="date">{{ $post->created_at->format('m/d/y(D)H:i:s') }}</span>
         <span class="post-num" data-post-num="{{ $post->post_number }}">No. {{ $post->post_number }}</span>
 
@@ -228,9 +234,18 @@
             imageHtml += '</div>';
         }
 
+        let flagHtml = '';
+        if (post.country_code && post.country_code !== 'XX') {
+            flagHtml = `<img src="https://flagcdn.com/16x12/${post.country_code.toLowerCase()}.png"
+                            alt="${post.country_name}"
+                            title="${post.country_name}"
+                            style="margin-left: 5px; vertical-align: middle;">`;
+        }
+
         postDiv.innerHTML = `
             <div class="post-header">
                 <span class="name">${post.name}</span>
+                ${flagHtml}
                 <span class="date">${post.created_at}</span>
                 <span class="post-num" data-post-num="${post.post_number}">No. ${post.post_number}</span>
                 <span style="color: #0F7A0F; font-weight: bold; margin-left: 10px;">NEW</span>

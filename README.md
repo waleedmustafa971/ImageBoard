@@ -6,6 +6,10 @@ A modern, full-featured imageboard (inspired by 4chan) built with Laravel 12 and
 
 ### Core Functionality
 - **Anonymous Posting** - Users can post without registration
+- **Country Flags** - Display poster's country flag next to their name (just like 4chan)
+  - Automatic IP-based geolocation
+  - Cached for performance (24-hour cache)
+  - Flag images via CDN
 - **Multiple Boards** - Create and manage different topic boards
 - **Thread System** - Create threads and reply to existing ones
 - **Post Quoting** - Click post numbers to quote other posts
@@ -243,7 +247,8 @@ app/
 │   ├── Ban.php
 │   └── Report.php
 └── Services/
-    └── ImageService.php
+    ├── ImageService.php
+    └── GeoIPService.php
 resources/views/
 ├── admin/
 │   ├── boards/

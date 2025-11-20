@@ -86,6 +86,8 @@ class ThreadController extends Controller
                     'created_at' => $post->created_at->format('m/d/y(D)H:i:s'),
                     'image_path' => $post->image_path,
                     'image_thumbnail_path' => $post->image_thumbnail_path,
+                    'country_code' => $post->country_code,
+                    'country_name' => $post->country_name,
                     'images' => $post->images->map(function ($image) {
                         return [
                             'image_path' => $image->image_path,
