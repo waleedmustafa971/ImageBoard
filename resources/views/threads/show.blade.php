@@ -47,8 +47,11 @@
                 <img src="https://flagcdn.com/16x12/{{ strtolower($post->country_code) }}.png"
                      alt="{{ $post->country_name }}"
                      title="{{ $post->country_name }}"
-                     style="margin-left: 5px; vertical-align: middle;">
+                     style="margin-left: 5px; vertical-align: middle;"
+                     onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<span style=\'color:red;\'>[{{ $post->country_code }}]</span>');">
             @endif
+        @else
+            <span style="color: orange; font-size: 10px;">[NO_COUNTRY]</span>
         @endif
         <span class="date">{{ $post->created_at->format('m/d/y(D)H:i:s') }}</span>
         <span class="post-num" data-post-num="{{ $post->post_number }}">No. {{ $post->post_number }}</span>
