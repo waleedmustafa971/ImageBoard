@@ -77,6 +77,13 @@
 </div>
 
 <div style="margin-top: 30px;">
+    <h3>Quick Actions</h3>
+    <div style="margin: 15px 0;">
+        <a href="{{ route('supervisor.reports.index') }}" style="display: inline-block; padding: 10px 20px; background: #D6DAF0; border: 1px solid #B7C5D9; text-decoration: none; color: #000;">Review Reports</a>
+    </div>
+</div>
+
+<div style="margin-top: 30px;">
     <form action="{{ route('supervisor.logout') }}" method="POST" style="display: inline;">
         @csrf
         <button type="submit" style="background: #D6DAF0; border: 1px solid #B7C5D9; padding: 10px 20px; cursor: pointer;">Logout</button>

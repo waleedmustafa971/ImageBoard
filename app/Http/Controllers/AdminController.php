@@ -8,6 +8,8 @@ use App\Models\Post;
 use App\Models\Thread;
 use App\Models\Supervisor;
 use App\Models\ModerationLog;
+use App\Models\Ban;
+use App\Models\Report;
 use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -354,5 +356,159 @@ class AdminController extends Controller
         $actions = ModerationLog::distinct('action')->pluck('action');
 
         return view('admin.activity-logs', compact('logs', 'boards', 'actions'));
+    }
+
+    // Ban Management
+    public function banIndex(Request $request): View
+    {
+        $query = Ban::with(['board', 'bannedBy']);
+
+        // Filter by board
+        if ($request->has('board_id') && $request->board_id) {
+            $query->where('board_id', $request->board_id);
+        }
+
+        // Filter by status
+        if ($request->has('status')) {
+            if ($request->status === 'active') {
+                $query->where(function ($q) {
+                    $q->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now());
+                });
+            } elseif ($request->status === 'expired') {
+                $query->where('expires_at', '<=', now());
+            }
+        }
+
+        $bans = $query->latest()->paginate(50);
+        $boards = Board::all();
+
+        return view('admin.bans.index', compact('bans', 'boards'));
+    }
+
+    public function banCreate(): View
+    {
+        $boards = Board::all();
+        return view('admin.bans.create', compact('boards'));
+    }
+
+    public function banStore(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ip_address' => ['required', 'ip'],
+            'board_id' => ['nullable', 'exists:boards,id'],
+            'reason' => ['required', 'string', 'max:1000'],
+            'duration' => ['required', 'string', 'in:1hour,1day,1week,1month,permanent'],
+        ]);
+
+        $expiresAt = match ($validated['duration']) {
+            '1hour' => now()->addHour(),
+            '1day' => now()->addDay(),
+            '1week' => now()->addWeek(),
+            '1month' => now()->addMonth(),
+            'permanent' => null,
+        };
+
+        $admin = Auth::guard('admin')->user();
+
+        Ban::create([
+            'ip_address' => $validated['ip_address'],
+            'board_id' => $validated['board_id'],
+            'reason' => $validated['reason'],
+            'banned_by_type' => 'App\Models\Admin',
+            'banned_by_id' => $admin->id,
+            'expires_at' => $expiresAt,
+        ]);
+
+        return redirect()->route('admin.bans.index')
+            ->with('success', 'Ban created successfully!');
+    }
+
+    public function banDestroy(Ban $ban): RedirectResponse
+    {
+        $ban->delete();
+
+        return redirect()->route('admin.bans.index')
+            ->with('success', 'Ban removed successfully!');
+    }
+
+    public function banFromPost(Request $request, Board $board, Thread $thread, Post $post): RedirectResponse
+    {
+        // Security: Ensure thread belongs to board and post belongs to thread
+        if ($thread->board_id !== $board->id || $post->thread_id !== $thread->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+            'duration' => ['required', 'string', 'in:1hour,1day,1week,1month,permanent'],
+            'board_specific' => ['boolean'],
+        ]);
+
+        $expiresAt = match ($validated['duration']) {
+            '1hour' => now()->addHour(),
+            '1day' => now()->addDay(),
+            '1week' => now()->addWeek(),
+            '1month' => now()->addMonth(),
+            'permanent' => null,
+        };
+
+        $admin = Auth::guard('admin')->user();
+
+        Ban::create([
+            'ip_address' => $post->ip_address,
+            'board_id' => $request->boolean('board_specific') ? $board->id : null,
+            'reason' => $validated['reason'],
+            'banned_by_type' => 'App\Models\Admin',
+            'banned_by_id' => $admin->id,
+            'expires_at' => $expiresAt,
+        ]);
+
+        return back()->with('success', 'User banned successfully!');
+    }
+
+    // Report Management
+    public function reportIndex(Request $request): View
+    {
+        $query = Report::with(['post.thread.board']);
+
+        // Filter by status
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        } else {
+            $query->where('status', 'pending'); // Show pending by default
+        }
+
+        $reports = $query->latest()->paginate(50);
+
+        return view('admin.reports.index', compact('reports'));
+    }
+
+    public function reportDismiss(Report $report): RedirectResponse
+    {
+        $admin = Auth::guard('admin')->user();
+
+        $report->update([
+            'status' => 'dismissed',
+            'reviewed_by_type' => 'App\Models\Admin',
+            'reviewed_by_id' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Report dismissed.');
+    }
+
+    public function reportReview(Report $report): RedirectResponse
+    {
+        $admin = Auth::guard('admin')->user();
+
+        $report->update([
+            'status' => 'reviewed',
+            'reviewed_by_type' => 'App\Models\Admin',
+            'reviewed_by_id' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Report marked as reviewed.');
     }
 }

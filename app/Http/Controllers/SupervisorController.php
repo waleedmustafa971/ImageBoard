@@ -6,6 +6,8 @@ use App\Models\Board;
 use App\Models\Post;
 use App\Models\Thread;
 use App\Models\ModerationLog;
+use App\Models\Ban;
+use App\Models\Report;
 use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -206,5 +208,92 @@ class SupervisorController extends Controller
         $post->delete();
 
         return back()->with('success', 'Post deleted successfully!');
+    }
+
+    // Ban Management
+    public function banFromPost(Request $request, Board $board, Thread $thread, Post $post): RedirectResponse
+    {
+        // Security: Ensure thread belongs to board and post belongs to thread
+        if ($thread->board_id !== $board->id || $post->thread_id !== $thread->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:1000'],
+            'duration' => ['required', 'string', 'in:1hour,1day,1week,1month,permanent'],
+            'board_specific' => ['boolean'],
+        ]);
+
+        $expiresAt = match ($validated['duration']) {
+            '1hour' => now()->addHour(),
+            '1day' => now()->addDay(),
+            '1week' => now()->addWeek(),
+            '1month' => now()->addMonth(),
+            'permanent' => null,
+        };
+
+        $supervisor = Auth::guard('supervisor')->user();
+
+        Ban::create([
+            'ip_address' => $post->ip_address,
+            'board_id' => $request->boolean('board_specific') ? $board->id : null,
+            'reason' => $validated['reason'],
+            'banned_by_type' => 'App\Models\Supervisor',
+            'banned_by_id' => $supervisor->id,
+            'expires_at' => $expiresAt,
+        ]);
+
+        return back()->with('success', 'User banned successfully!');
+    }
+
+    // Report Management
+    public function reportIndex(Request $request): View
+    {
+        $supervisor = Auth::guard('supervisor')->user();
+        $boardIds = $supervisor->boards->pluck('id');
+
+        $query = Report::with(['post.thread.board'])
+            ->whereHas('post.thread', function ($q) use ($boardIds) {
+                $q->whereIn('board_id', $boardIds);
+            });
+
+        // Filter by status
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        } else {
+            $query->where('status', 'pending'); // Show pending by default
+        }
+
+        $reports = $query->latest()->paginate(50);
+
+        return view('supervisor.reports.index', compact('reports'));
+    }
+
+    public function reportDismiss(Report $report): RedirectResponse
+    {
+        $supervisor = Auth::guard('supervisor')->user();
+
+        $report->update([
+            'status' => 'dismissed',
+            'reviewed_by_type' => 'App\Models\Supervisor',
+            'reviewed_by_id' => $supervisor->id,
+            'reviewed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Report dismissed.');
+    }
+
+    public function reportReview(Report $report): RedirectResponse
+    {
+        $supervisor = Auth::guard('supervisor')->user();
+
+        $report->update([
+            'status' => 'reviewed',
+            'reviewed_by_type' => 'App\Models\Supervisor',
+            'reviewed_by_id' => $supervisor->id,
+            'reviewed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Report marked as reviewed.');
     }
 }

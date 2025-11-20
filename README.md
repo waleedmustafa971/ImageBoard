@@ -4,16 +4,41 @@ A modern, full-featured imageboard (inspired by 4chan) built with Laravel 12 and
 
 ## Features
 
+### Core Functionality
 - **Anonymous Posting** - Users can post without registration
 - **Multiple Boards** - Create and manage different topic boards
-- **Image Uploads** - Support for JPG, PNG, and GIF with automatic thumbnail generation
 - **Thread System** - Create threads and reply to existing ones
 - **Post Quoting** - Click post numbers to quote other posts
+- **Catalog View** - Visual overview of all threads in a board
+
+### Media & Images
+- **Multiple Image Uploads** - Upload up to 4 images per post (5MB each)
+- **Image Support** - JPG, PNG, GIF, and WEBP with automatic thumbnail generation
+- **Image Gallery** - Multiple images displayed in a clean grid layout
+
+### Moderation & Security
+- **Ban System** - IP-based banning with board-specific or global scope
+  - Flexible ban durations (1 hour, 1 day, 1 week, 1 month, permanent)
+  - Ban from post action for quick moderation
+  - Ban management interface for admins
+- **Captcha & Anti-Spam** - Simple math captcha on all posts
+  - Rate limiting (3 posts per minute per IP)
+  - Protection against bot spam
+- **Post Reporting** - Community-driven moderation
+  - Report posts for spam, illegal content, harassment, off-topic, or other
+  - Report review dashboard for admins and supervisors
+  - Duplicate report prevention (24-hour cooldown per IP per post)
 - **Admin Panel** - Complete board and content moderation system
 - **Supervisor System** - Assign board-specific moderators with limited permissions
 - **Activity Logging** - Track all moderation actions by admins and supervisors
+
+### User Experience
+- **Live Thread Updates** - Auto-refresh threads every 10 seconds
+  - New posts appear automatically with "NEW" badge
+  - No page reload required
+  - Real-time discussion experience
 - **Thread Management** - Pin and lock threads
-- **Catalog View** - Visual overview of all threads in a board
+- **Post Actions** - Delete posts and threads with proper authorization
 
 ## Tech Stack
 
@@ -105,6 +130,17 @@ Access the admin panel at: `http://localhost:8000/admin/login`
   - Create and manage board supervisors
   - Assign/remove supervisors to specific boards
   - Activate/deactivate supervisor accounts
+- **Ban Management**
+  - Create IP-based bans (global or board-specific)
+  - Set ban duration (1 hour to permanent)
+  - Ban users directly from posts
+  - View and remove active/expired bans
+  - Filter bans by status and board
+- **Report Management**
+  - Review user-submitted post reports
+  - Mark reports as reviewed or dismissed
+  - Filter reports by status
+  - Quick access to reported posts
 - **Moderation Actions**
   - Pin/unpin threads
   - Lock/unlock threads
@@ -127,9 +163,14 @@ Supervisors are board-specific moderators with limited permissions compared to a
   - Delete threads
 - **Post Moderation**
   - Delete individual posts
+  - Ban users from posts (board-specific or global)
+- **Report Management**
+  - Review reports from assigned boards
+  - Mark reports as reviewed or dismissed
 - **Activity Dashboard**
   - View assigned boards
   - See personal moderation history
+  - Access to report queue
 
 ### Creating a Supervisor
 
@@ -148,15 +189,24 @@ Access the supervisor panel at: `http://localhost:8000/supervisor/login`
 1. Navigate to any board (e.g., `/b`)
 2. Click "Start a New Thread"
 3. Fill in the subject and content
-4. Optionally upload an image (required for OP)
-5. Submit
+4. Upload an image (required for OP)
+5. Solve the math captcha
+6. Submit
 
 ### Replying to a Thread
 1. Open any thread
 2. Scroll to the reply form
 3. Fill in your comment
-4. Optionally upload an image
-5. Submit
+4. Optionally upload up to 4 images
+5. Solve the math captcha
+6. Submit
+7. New replies will auto-load every 10 seconds
+
+### Reporting a Post
+1. Click the "Report" button on any post
+2. Select a reason (spam, illegal content, harassment, off-topic, or other)
+3. Submit report
+4. Moderators will review the report
 
 ### Quoting Posts
 Click on any post number to automatically add a quote reference to your reply.
@@ -165,31 +215,45 @@ Click on any post number to automatically add a quote reference to your reply.
 
 ```
 app/
+├── Helpers/
+│   └── Captcha.php
 ├── Http/
 │   ├── Controllers/
 │   │   ├── AdminController.php
 │   │   ├── SupervisorController.php
 │   │   ├── BoardController.php
 │   │   ├── PostController.php
-│   │   └── ThreadController.php
-│   └── Middleware/
-│       └── EnsureSupervisorCanModerate.php
+│   │   ├── ThreadController.php
+│   │   └── ReportController.php
+│   ├── Middleware/
+│   │   ├── EnsureSupervisorCanModerate.php
+│   │   ├── CheckIfBanned.php
+│   │   └── RateLimitPosts.php
+│   └── Requests/
+│       ├── StoreThreadRequest.php
+│       └── StorePostRequest.php
 ├── Models/
 │   ├── Admin.php
 │   ├── Supervisor.php
 │   ├── Board.php
 │   ├── Post.php
+│   ├── PostImage.php
 │   ├── Thread.php
-│   └── ModerationLog.php
+│   ├── ModerationLog.php
+│   ├── Ban.php
+│   └── Report.php
 └── Services/
     └── ImageService.php
 resources/views/
 ├── admin/
 │   ├── boards/
 │   ├── supervisors/
+│   ├── bans/
+│   ├── reports/
 │   ├── activity-logs.blade.php
 │   └── dashboard.blade.php
 ├── supervisor/
+│   ├── reports/
 │   ├── login.blade.php
 │   └── dashboard.blade.php
 ├── boards/
@@ -206,14 +270,23 @@ resources/views/
 - **Authorization**
   - Board-specific access control for supervisors
   - Middleware-based permission checking
+- **Spam Protection**
+  - Math captcha on all thread and post submissions
+  - Rate limiting (3 posts per minute per IP)
+  - IP-based ban system with flexible durations
+  - Ban enforcement middleware
 - **Data Protection**
   - CSRF protection on all forms
-  - Image upload validation and sanitization
+  - Image upload validation and sanitization (5MB limit per image)
+  - Multiple image upload support with validation
   - SQL injection protection via Eloquent ORM
   - XSS protection via Blade templating
+  - IP address hashing for privacy
 - **Audit Trail**
   - Comprehensive moderation action logging
   - Track all changes with moderator attribution
+  - Ban action logging
+  - Report submission tracking
 
 ## Contributing
 

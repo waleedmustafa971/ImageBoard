@@ -11,6 +11,8 @@
         <a href="{{ route('admin.boards.index') }}" style="display: inline-block; padding: 10px 20px; background: #D6DAF0; border: 1px solid #B7C5D9; text-decoration: none; color: #000; margin-right: 10px;">Manage Boards</a>
         <a href="{{ route('admin.boards.create') }}" style="display: inline-block; padding: 10px 20px; background: #D6DAF0; border: 1px solid #B7C5D9; text-decoration: none; color: #000; margin-right: 10px;">Create New Board</a>
         <a href="{{ route('admin.supervisors.index') }}" style="display: inline-block; padding: 10px 20px; background: #D6DAF0; border: 1px solid #B7C5D9; text-decoration: none; color: #000; margin-right: 10px;">Manage Supervisors</a>
+        <a href="{{ route('admin.bans.index') }}" style="display: inline-block; padding: 10px 20px; background: #D6DAF0; border: 1px solid #B7C5D9; text-decoration: none; color: #000; margin-right: 10px;">Manage Bans</a>
+        <a href="{{ route('admin.reports.index') }}" style="display: inline-block; padding: 10px 20px; background: #D6DAF0; border: 1px solid #B7C5D9; text-decoration: none; color: #000; margin-right: 10px;">Review Reports</a>
         <a href="{{ route('admin.activity.logs') }}" style="display: inline-block; padding: 10px 20px; background: #D6DAF0; border: 1px solid #B7C5D9; text-decoration: none; color: #000;">Activity Logs</a>
     </div>
 </div>

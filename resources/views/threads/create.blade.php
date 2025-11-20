@@ -25,6 +25,16 @@
     <input type="file" name="image" id="image" accept="image/jpeg,image/png,image/gif,image/webp" required>
     <small style="display: block; margin-top: 5px; color: #666;">Max 5MB. Allowed: JPG, PNG, GIF, WEBP</small>
 
+    @php
+        $captcha = \App\Helpers\Captcha::generate();
+    @endphp
+    <label for="captcha">Verification: <span style="color: red;">*</span></label>
+    <div style="margin-bottom: 10px;">
+        <strong style="font-size: 18px; color: #AF0A0F;">{{ $captcha['question'] }}</strong>
+    </div>
+    <input type="number" name="captcha" id="captcha" required placeholder="Enter your answer">
+    <small style="display: block; margin-top: 5px; color: #666;">Solve the math problem to verify you're human</small>
+
     <button type="submit">Create Thread</button>
 </form>
 @endsection

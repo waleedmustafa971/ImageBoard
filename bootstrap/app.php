@@ -13,6 +13,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'supervisor.can_moderate' => \App\Http\Middleware\EnsureSupervisorCanModerate::class,
+            'check.banned' => \App\Http\Middleware\CheckIfBanned::class,
+            'rate.limit.posts' => \App\Http\Middleware\RateLimitPosts::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

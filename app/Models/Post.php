@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Post extends Model
@@ -27,9 +28,14 @@ class Post extends Model
         return $this->belongsTo(Thread::class);
     }
 
+    public function images(): HasMany
+    {
+        return $this->hasMany(PostImage::class)->orderBy('order');
+    }
+
     public function hasImage(): bool
     {
-        return !is_null($this->image_path);
+        return !is_null($this->image_path) || $this->images()->count() > 0;
     }
 
     public function getImageUrlAttribute(): ?string

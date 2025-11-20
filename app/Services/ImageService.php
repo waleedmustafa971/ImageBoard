@@ -48,6 +48,24 @@ class ImageService
         return $thumbnailPath;
     }
 
+    public function storeMultiple(array $images, string $directory = 'images'): array
+    {
+        $storedImages = [];
+
+        foreach ($images as $index => $image) {
+            if ($image instanceof UploadedFile) {
+                $imageData = $this->store($image, $directory);
+                $storedImages[] = [
+                    'image_path' => $imageData['image_path'],
+                    'thumbnail_path' => $imageData['thumbnail_path'],
+                    'order' => $index,
+                ];
+            }
+        }
+
+        return $storedImages;
+    }
+
     public function delete(?string $imagePath, ?string $thumbnailPath): void
     {
         if ($imagePath && Storage::disk('public')->exists($imagePath)) {

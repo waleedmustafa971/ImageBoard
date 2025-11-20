@@ -8,6 +8,8 @@ use App\Models\Post;
 use App\Models\Thread;
 use App\Services\ImageService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ThreadController extends Controller
@@ -54,8 +56,45 @@ class ThreadController extends Controller
 
         $thread->load(['posts' => function ($query) {
             $query->orderBy('created_at');
-        }]);
+        }, 'posts.images']);
 
         return view('threads.show', compact('board', 'thread'));
+    }
+
+    public function getNewPosts(Request $request, Board $board, Thread $thread): JsonResponse
+    {
+        // Security: Ensure thread belongs to this board
+        if ($thread->board_id !== $board->id) {
+            abort(404);
+        }
+
+        $lastPostId = $request->query('last_post_id', 0);
+
+        $newPosts = $thread->posts()
+            ->with('images')
+            ->where('id', '>', $lastPostId)
+            ->orderBy('created_at')
+            ->get();
+
+        return response()->json([
+            'posts' => $newPosts->map(function ($post) {
+                return [
+                    'id' => $post->id,
+                    'post_number' => $post->post_number,
+                    'name' => $post->name,
+                    'content' => $post->content,
+                    'created_at' => $post->created_at->format('m/d/y(D)H:i:s'),
+                    'image_path' => $post->image_path,
+                    'image_thumbnail_path' => $post->image_thumbnail_path,
+                    'images' => $post->images->map(function ($image) {
+                        return [
+                            'image_path' => $image->image_path,
+                            'thumbnail_path' => $image->thumbnail_path,
+                        ];
+                    }),
+                ];
+            }),
+            'count' => $newPosts->count(),
+        ]);
     }
 }

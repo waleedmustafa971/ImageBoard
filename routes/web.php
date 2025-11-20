@@ -5,6 +5,7 @@ use App\Http\Controllers\BoardController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\SupervisorController;
 use App\Http\Controllers\ThreadController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 // Board Index
@@ -16,11 +17,15 @@ Route::get('/{board}/catalog', [BoardController::class, 'catalog'])->name('board
 
 // Thread Routes
 Route::get('/{board}/thread/create', [ThreadController::class, 'create'])->name('threads.create');
-Route::post('/{board}/thread', [ThreadController::class, 'store'])->name('threads.store');
+Route::post('/{board}/thread', [ThreadController::class, 'store'])->middleware(['check.banned', 'rate.limit.posts'])->name('threads.store');
 Route::get('/{board}/thread/{thread}', [ThreadController::class, 'show'])->name('threads.show');
+Route::get('/{board}/thread/{thread}/new-posts', [ThreadController::class, 'getNewPosts'])->name('threads.newPosts');
 
 // Post (Reply) Routes
-Route::post('/{board}/thread/{thread}/reply', [PostController::class, 'store'])->name('posts.store');
+Route::post('/{board}/thread/{thread}/reply', [PostController::class, 'store'])->middleware(['check.banned', 'rate.limit.posts'])->name('posts.store');
+
+// Report Routes (Public)
+Route::post('/{board}/thread/{thread}/post/{post}/report', [ReportController::class, 'store'])->name('posts.report');
 
 // Admin Routes
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -59,6 +64,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Activity Logs
         Route::get('/activity-logs', [AdminController::class, 'activityLogs'])->name('activity.logs');
+
+        // Ban Management
+        Route::get('/bans', [AdminController::class, 'banIndex'])->name('bans.index');
+        Route::get('/bans/create', [AdminController::class, 'banCreate'])->name('bans.create');
+        Route::post('/bans', [AdminController::class, 'banStore'])->name('bans.store');
+        Route::delete('/bans/{ban}', [AdminController::class, 'banDestroy'])->name('bans.destroy');
+        Route::post('/{board}/thread/{thread}/post/{post}/ban', [AdminController::class, 'banFromPost'])->name('posts.ban');
+
+        // Report Management
+        Route::get('/reports', [AdminController::class, 'reportIndex'])->name('reports.index');
+        Route::post('/reports/{report}/dismiss', [AdminController::class, 'reportDismiss'])->name('reports.dismiss');
+        Route::post('/reports/{report}/review', [AdminController::class, 'reportReview'])->name('reports.review');
     });
 });
 
@@ -80,5 +97,13 @@ Route::prefix('supervisor')->name('supervisor.')->group(function () {
 
         // Post Management (with board access check)
         Route::delete('/{board}/thread/{thread}/post/{post}', [SupervisorController::class, 'deletePost'])->name('posts.delete')->middleware('supervisor.can_moderate');
+
+        // Ban Management (with board access check)
+        Route::post('/{board}/thread/{thread}/post/{post}/ban', [SupervisorController::class, 'banFromPost'])->name('posts.ban')->middleware('supervisor.can_moderate');
+
+        // Report Management
+        Route::get('/reports', [SupervisorController::class, 'reportIndex'])->name('reports.index');
+        Route::post('/reports/{report}/dismiss', [SupervisorController::class, 'reportDismiss'])->name('reports.dismiss');
+        Route::post('/reports/{report}/review', [SupervisorController::class, 'reportReview'])->name('reports.review');
     });
 });
