@@ -40,11 +40,15 @@
 <div class="post {{ $index === 0 ? 'op' : '' }}" id="post-{{ $post->post_number }}">
     <div class="post-header">
         <span class="name">{{ $post->name }}</span>
-        @if($post->country_code && $post->country_code !== 'XX')
-            <img src="https://flagcdn.com/16x12/{{ strtolower($post->country_code) }}.png"
-                 alt="{{ $post->country_name }}"
-                 title="{{ $post->country_name }}"
-                 style="margin-left: 5px; vertical-align: middle;">
+        @if($post->country_code)
+            @if($post->country_code === 'XX')
+                <span title="Local/Private IP" style="margin-left: 5px; font-size: 11px; color: #999;">[Local]</span>
+            @else
+                <img src="https://flagcdn.com/16x12/{{ strtolower($post->country_code) }}.png"
+                     alt="{{ $post->country_name }}"
+                     title="{{ $post->country_name }}"
+                     style="margin-left: 5px; vertical-align: middle;">
+            @endif
         @endif
         <span class="date">{{ $post->created_at->format('m/d/y(D)H:i:s') }}</span>
         <span class="post-num" data-post-num="{{ $post->post_number }}">No. {{ $post->post_number }}</span>
@@ -235,11 +239,15 @@
         }
 
         let flagHtml = '';
-        if (post.country_code && post.country_code !== 'XX') {
-            flagHtml = `<img src="https://flagcdn.com/16x12/${post.country_code.toLowerCase()}.png"
-                            alt="${post.country_name}"
-                            title="${post.country_name}"
-                            style="margin-left: 5px; vertical-align: middle;">`;
+        if (post.country_code) {
+            if (post.country_code === 'XX') {
+                flagHtml = `<span title="Local/Private IP" style="margin-left: 5px; font-size: 11px; color: #999;">[Local]</span>`;
+            } else {
+                flagHtml = `<img src="https://flagcdn.com/16x12/${post.country_code.toLowerCase()}.png"
+                                alt="${post.country_name}"
+                                title="${post.country_name}"
+                                style="margin-left: 5px; vertical-align: middle;">`;
+            }
         }
 
         postDiv.innerHTML = `
