@@ -293,6 +293,33 @@ resources/views/
   - Ban action logging
   - Report submission tracking
 
+## Development & Testing
+
+### Testing Country Flags
+
+The imageboard includes a testing command to verify the GeoIP functionality:
+
+```bash
+# Test GeoIP service with various countries
+php artisan test:country-flags
+
+# Test with a specific IP address and update latest post
+php artisan test:country-flags --ip=8.8.8.8
+```
+
+**Note:** When testing on localhost, posts will show **[Local]** indicator instead of flags. Deploy to a production server to see actual country flags based on user IP addresses.
+
+### Clearing Caches
+
+After making changes to views or configuration:
+
+```bash
+php artisan cache:clear
+php artisan view:clear
+php artisan config:clear
+php artisan route:clear
+```
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
